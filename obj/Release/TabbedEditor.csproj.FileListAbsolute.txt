@@ -1,0 +1,10 @@
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\bin\Release\TabbedEditor.exe.config
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\bin\Release\TabbedEditor.exe
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\bin\Release\TabbedEditor.pdb
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.csproj.AssemblyReference.cache
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.Form1.resources
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.Properties.Resources.resources
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.csproj.GenerateResource.cache
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.csproj.CoreCompileInputs.cache
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.exe
+C:\Users\guick\Source\Repos\Editor\v1.0\TabbedEditor\obj\Release\TabbedEditor.pdb
