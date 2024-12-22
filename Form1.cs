@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace TabbedEditor
 {
@@ -27,18 +28,6 @@ namespace TabbedEditor
             recentList.OpenRecentFile(clickedFileName);
         }
 
-        // File->Open
-        //private void saveToolStripMenuItem_Click(object sender, EventArgs e)
-        //{
-        //    OpenFileDialog opendialog = new OpenFileDialog();
-        //    if (opendialog.ShowDialog() == DialogResult.OK)
-        //    {
-        //        string strfilename = opendialog.FileName;
-        //        string filetext = File.ReadAllText(strfilename);
-        //        recentList.AddRecentFile(strfilename);
-        //        editor.OpenDocument(strfilename, filetext);
-        //    }
-        //}
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog opendialog = new OpenFileDialog();
@@ -120,6 +109,11 @@ namespace TabbedEditor
         private void Form1_Load(object sender, EventArgs e)
         {
             // :)
+            
+            comboBox1.Items.Add("UTF-8");
+            comboBox1.Items.Add("ASCII");
+            comboBox1.Items.Add("Unicode");
+            comboBox1.SelectedIndex = -1; 
         }
 
         private void toolStrip1_DoubleClick(object sender, EventArgs e)
@@ -132,6 +126,33 @@ namespace TabbedEditor
         {
             editor.SaveDocumentAs();
         }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (comboBox1.SelectedIndex != -1)
+            {
+                IEncodingStrategy encodingStrategy = null;
+                switch (comboBox1.SelectedItem.ToString())
+                {
+                    case "UTF-8":
+                        encodingStrategy = new EncodingUTF();
+                        break;
+                    case "ASCII":
+                        encodingStrategy = new EncodingASCII();
+                        break;
+                    case "Unicode":
+                        encodingStrategy = new EncodingUnicode();
+                        break;
+                    default:
+                        MessageBox.Show("Unsupported Encoding Selected.");
+                        return;
+                }
+
+                editor.EncodeChange(encodingStrategy);
+            }
+        }
+
+
     }
 
     public class Editor
@@ -139,6 +160,7 @@ namespace TabbedEditor
         private TabControl tabControl;
         private Stack<string> undoList = new Stack<string>();
         private Stack<string> redoList = new Stack<string>();
+        
         private const int MaxUndoSteps = 5;
         private bool isUndoRedoOperation = false;
 
@@ -165,42 +187,21 @@ namespace TabbedEditor
             RichText.TextChanged += RichText_TextChanged;
             Page.Controls.Add(RichText);
             tabControl.Controls.Add(Page);
+            // Создаем издателя и наблюдателя для RichTextBox
+            RichTextBoxSubject richTextBoxSubject = new RichTextBoxSubject(RichText);
+            TabNameObserver tabNameObserver = new TabNameObserver(Page);
+            richTextBoxSubject.Attach(tabNameObserver);
         }
 
-        //public void OpenDocument(string filePath, string fileText)
-        //{
-        //    string tabName = Path.GetFileName(filePath);
-
-        //    // Проверка на одинаковые вкладки
-        //    foreach (TabPage tab in tabControl.TabPages)
-        //    {
-        //        if (tab.Text.StartsWith(tabName))
-        //        {
-        //            MessageBox.Show("A tab with this name is already open.");
-        //            tabControl.SelectedTab = tab;
-        //            return;
-        //        }
-        //    }
-
-        //    TabPage TempPage = new TabPage(tabName);
-        //    RichTextBox RichText = new RichTextBox();
-        //    RichText.Dock = DockStyle.Fill;
-        //    RichText.Text = fileText;
-        //    RichText.TextChanged += RichText_TextChanged;
-        //    TempPage.Controls.Add(RichText);
-        //    tabControl.Controls.Add(TempPage);
-        //    tabControl.SelectedTab = TempPage;
-        //}
         public void OpenDocument(Document document)
         {
             string tabName = Path.GetFileName(document.FilePath);
 
-            // Проверка на одинаковые вкладки
             foreach (TabPage tab in tabControl.TabPages)
             {
                 if (tab.Text.StartsWith(tabName))
                 {
-                    MessageBox.Show("A tab with this name is already open.");
+                    MessageBox.Show("Already open!");
                     tabControl.SelectedTab = tab;
                     return;
                 }
@@ -214,6 +215,10 @@ namespace TabbedEditor
             TempPage.Controls.Add(RichText);
             tabControl.Controls.Add(TempPage);
             tabControl.SelectedTab = TempPage;
+            // Создаем издателя и наблюдателя для RichTextBox
+            RichTextBoxSubject richTextBoxSubject = new RichTextBoxSubject(RichText);
+            TabNameObserver tabNameObserver = new TabNameObserver(TempPage);
+            richTextBoxSubject.Attach(tabNameObserver);
         }
         private void RichText_TextChanged(object sender, EventArgs e)
         {
@@ -223,11 +228,11 @@ namespace TabbedEditor
                 return;
             }
 
-            TabPage currentTab = tabControl.SelectedTab;
-            if (currentTab != null && !currentTab.Text.EndsWith("*"))
-            {
-                currentTab.Text += "*";
-            }
+            //TabPage currentTab = tabControl.SelectedTab;
+            //if (currentTab != null && !currentTab.Text.EndsWith("*"))
+            //{
+            //    currentTab.Text += "*";
+            //}
 
             if (undoList.Count == MaxUndoSteps)
             {
@@ -237,7 +242,22 @@ namespace TabbedEditor
             undoList.Push(GetRichTextBox().Text);
             redoList.Clear();
         }
-
+        public void EncodeChange(IEncodingStrategy encodingStrategy)
+        {
+            TabPage Tpage = tabControl.SelectedTab;
+            if (Tpage != null)
+            {
+                RichTextBox richTextBox = GetRichTextBox();
+                if (richTextBox != null)
+                {
+                    string currentText = richTextBox.Text;
+                    string encodedText = encodingStrategy.Encode(currentText);
+                    richTextBox.Text = encodedText;
+                }
+                    
+            }
+        }
+         
         public void Cut()
         {
             TabPage Tpage = tabControl.SelectedTab;
@@ -431,18 +451,6 @@ namespace TabbedEditor
             UpdateRecentFilesMenu();
         }
 
-        //public void OpenRecentFile(string filePath)
-        //{
-        //    if (File.Exists(filePath))
-        //    {
-        //        string filetext = File.ReadAllText(filePath);
-        //        editor.OpenDocument(filePath, filetext);
-        //    }
-        //    else
-        //    {
-        //        MessageBox.Show("File not found!");
-        //    }
-        //}
         public void OpenRecentFile(string filePath)
         {
             if (File.Exists(filePath))
@@ -466,5 +474,96 @@ namespace TabbedEditor
             }
         }
     }
-}
+    public interface IEncodingStrategy
+    {
+        string Encode(string text);
+    }
+    public class EncodingUTF : IEncodingStrategy
+    {
+        public string Encode(string text)
+        {
+            byte[] utf8Bytes = Encoding.UTF8.GetBytes(text);
+            return BitConverter.ToString(utf8Bytes).Replace("-"," ");
+        }
+    }
 
+    public class EncodingASCII : IEncodingStrategy
+    {
+        public string Encode(string text)
+        {
+            byte[] asciiByteArray = Encoding.ASCII.GetBytes(text);
+            string asciiEncoded = String.Join(" ", asciiByteArray);
+            return asciiEncoded;
+        }
+    }
+
+    public class EncodingUnicode : IEncodingStrategy
+    {
+        public string Encode(string text)
+        {
+            byte[] bytes = Encoding.Unicode.GetBytes(text);
+            return BitConverter.ToString(bytes).Replace("-", " ");
+        }
+    }
+    public interface IObserver
+    {
+        void Update();
+    }
+
+    public interface ISubject
+    {
+        void Attach(IObserver observer);
+        void Detach(IObserver observer);
+        void Notify();
+    }
+    //издатель
+    public class RichTextBoxSubject : ISubject
+    {
+        private List<IObserver> _observers = new List<IObserver>();
+        private RichTextBox _richTextBox;
+
+        public RichTextBoxSubject(RichTextBox richTextBox)
+        {
+            _richTextBox = richTextBox;
+            _richTextBox.TextChanged += (sender, e) => Notify();
+        }
+
+        public void Attach(IObserver observer)
+        {
+            _observers.Add(observer);
+        }
+
+        public void Detach(IObserver observer)
+        {
+            _observers.Remove(observer);
+        }
+
+        public void Notify()
+        {
+            foreach (var observer in _observers)
+            {
+                observer.Update();
+            }
+        }
+    }
+    //Наблюдатель
+    public class TabNameObserver : IObserver
+    {
+        private TabPage _tabPage;
+
+        public TabNameObserver(TabPage tabPage)
+        {
+            _tabPage = tabPage;
+        }
+
+        public void Update()
+        {
+            if (!_tabPage.Text.EndsWith("*"))
+            {
+                _tabPage.Text += "*";
+            }
+        }
+    }
+
+
+}
